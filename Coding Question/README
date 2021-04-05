@@ -1,0 +1,7 @@
+Time Complexity: 
+  AddElement(), GetMovingAvg(), GetElement(), and all other operations's time complexity is O(1)
+
+Please refer to MovingAverage.hpp for the API details. 
+
+Compile and run a test program:
+  clang++ -o test -std=c++14 main.cc MovingAverage.cc MovingAverageImpl.cc && ./test
