@@ -1,0 +1,45 @@
+Architecture design is available in the image attached (architecture.png) or online (https://miro.com/app/board/o9J_lNSW87k=/).
+
+Description module by module
+1. Users
+   There are two types of user, i.e., the 'end-user' of a website or app equipped with the analytic capability where the analytic data (clicks, conversion rate, duration of visit, etc) is collected from
+   and the 'Business owners' where they pay to integrate analytic feature into their websites/apps to capture user analytic data and provide insights to be queried or reported.
+
+2. Gateway
+    The gateway handle user connections and perform load balancing. The gateway itself can have multiple instances and are stateless. 
+    The state or information about connection and session is stored in the 'Session Service'
+
+3. Session Service
+    This maintain a session metadata for a connected end-user or business-owner. This info are mostly temporary thus can be stored with in-memory KV store like Redis
+
+4. Profile Service  
+    Provide a feature to allow Business Owner to create a profile, choose plans, define analytics metrics they want. 
+    This information is persisted in RDMS because they are relational structured data.
+    For example, a table of (userid, payment info, email, etc). Another table storing Plan (which user subscribe to this), etc
+
+    Based on the user plan, the profile service may schedule analytic job to be performed by the Analytic Engine.
+
+5. Distributed Message Stream
+    Pulsar is a pub/sub service where a topic can be an event. Pulsar itself is a distributed system so it can scale to handle the million write per day.
+    It also uses Bookkeeper internally to provide persistency. This is importatnt as one of the requirement is to reprocess the historical data. Bookkeeper provide a persistency, tailing read and index-read for old data.
+
+6. Analytic Engine
+    Once the events are queued in Pulsar a topic, it has to be consumed by the  analytic engine.
+    We can use Spark to process the streaming data from a topic and do some agegration / map reduce.
+    After the data is processed, the result or gist can be stored in a semi structured DB that is also distributed for HA and perhaps sharded performance.
+    E.g., of the semi structured data could be a statistic for a particular website such as, average visit time, average clicks, average age of visitors, etc    
+
+7. Query Services 
+    Responsible for querying certain metrics driven by Business Owner user. The result might already be in the Semi-structured Distributed DB, 
+    or it may schedule a new job in the Analytic Engine.
+
+8. Report / Alert Service
+    A push service that provide user a report or alert info either to their web interface and/or email.
+    This may include a mail service such as Twilio.
+
+Note:
+  - Each services are microservice based, so should be easy to scale in and out
+  - The Databases used are distributed, thus should provide HA via replication. 
+  - The Message Stream is also distributed and HA also persisted to support reading historical data 
+  - Query Services can be scale out to handle the read volume. Also, data in mongoDB can be sharded to improve query perf.
+  
